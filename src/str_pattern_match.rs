@@ -1,4 +1,4 @@
-pub fn match_str(search: &str, pattern: &str) -> bool {
+fn match_str(search: &str, pattern: &str) -> bool {
     let search_as_vec: Vec<char> = search.chars().collect();
     let pattern_as_vec: Vec<char> = pattern.chars().collect();
     let search_len = search.len();
@@ -39,5 +39,17 @@ pub fn match_str(search: &str, pattern: &str) -> bool {
     }
 
     return false;
+}
+
+pub fn find_occurences(tokens: &Vec<String>, pattern: &String) -> Vec<String> {
+    let mut occurences = Vec::<String>::with_capacity(tokens.len() / 3);
+ 
+    for token in tokens {
+        if match_str(token, pattern) {
+            occurences.push(token.clone());
+        }
+    }
+
+    return occurences;
 }
 
