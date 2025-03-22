@@ -1,10 +1,10 @@
 use std::fs::File;
 use std::io::{ErrorKind, Read};
 
-struct UserInput<'a> {
-    query:      &'a String,
-    file_path:  &'a String,
-}
+mod cli;
+mod str_match;
+
+use self::str_match::match_str;
 
 fn get_file_contents(file_path: &str) -> String {
     let mut file = match File::open(file_path) {
@@ -61,49 +61,6 @@ fn parse_to_tokens(file_contents: &String) -> Vec<&str> {
     return tokens;
 }
 
-fn match_str(search: &str, pattern: &str) -> bool {
-    let search_as_vec: Vec<char> = search.chars().collect();
-    let pattern_as_vec: Vec<char> = pattern.chars().collect();
-    let search_len = search.len();
-    let pattern_len = pattern.len();
-    let mut search_ind: usize = 0;
-    let mut pattern_ind: usize = 0;
- 
-    while search_ind < search_len {
-        if search_as_vec[search_ind] == pattern_as_vec[pattern_ind] {
-            let mut curr_search_ind = search_ind;
-
-            while pattern_ind < pattern_len &&
-                search_as_vec[curr_search_ind] == pattern_as_vec[pattern_ind] {
-                curr_search_ind += 1;
-                pattern_ind += 1;
-
-                // end of 'search' reached
-                if curr_search_ind >= search_len {
-                    if pattern_ind == pattern_len {
-                        return true;
-                    }
-                    return false;
-                }
-            }
-
-            // we found a match
-            if pattern_ind == pattern_len {
-                return true;
-            }
-            else {
-                pattern_ind = 0;
-                search_ind += 1;
-            }
-        }
-        else {
-            search_ind += 1;
-        }
-    }
-
-    return false;
-}
-
 fn find_occurences<'a>(tokens: &'a Vec<&'a str>, pattern: &str) -> Vec<&'a str> {
     let mut occurences = Vec::<&str>::with_capacity(tokens.len() / 3);
  
@@ -122,14 +79,11 @@ fn main() {
         panic!("You should provide at least 2 arguments for the program:\n1) String to search for\n2) Path to the file");
     }
 
-    let user_input = UserInput {
-        query: &args[1],
-        file_path: &args[2]
-    };
+    let user_input = cli::parse_user_input_cli(&args);
 
     let contents = get_file_contents(&user_input.file_path);
     let tokens = parse_to_tokens(&contents);
-    let occurences = find_occurences(&tokens, &user_input.query);
+    let occurences = find_occurences(&tokens, &user_input.search_pattern);
 
     for occur in occurences.iter() {
         println!("{}", occur);
