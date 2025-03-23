@@ -1,8 +1,8 @@
 fn match_str(search: &str, pattern: &str) -> bool {
     let search_as_vec: Vec<char> = search.chars().collect();
     let pattern_as_vec: Vec<char> = pattern.chars().collect();
-    let search_len = search.len();
-    let pattern_len = pattern.len();
+    let search_len = search_as_vec.len();
+    let pattern_len = pattern_as_vec.len();
     let mut search_ind: usize = 0;
     let mut pattern_ind: usize = 0;
  

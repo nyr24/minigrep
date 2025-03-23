@@ -1,5 +1,6 @@
-use crate::cli_output;
+use crate::cli_output::{self, print_opt_flags};
 
+// optional flags
 const OPT_FLAG_HELP: u8         = b'h';
 const OPT_FLAG_DIR: u8          = b'd';
 const OPT_FLAG_RECURSIVE: u8    = b'r';
@@ -18,13 +19,14 @@ pub enum OptFlag {
     Quiet = OPT_FLAG_QUIET,
 }
 
-const FLAG_SEARCH: &str = "-s";
-const FLAG_PATH: &str = "-p";
-const FLAG_OUTPUT_TO_FILE: &str = "-f";
+// non-optional flags (argument expected)
+const FLAG_SEARCH: u8 = b's';
+const _FLAG_OUTPUT_TO_FILE: u8 = b'f';
+const FLAG_PATH: u8 = b'p';
 
 pub struct UserInput {
     pub search_pattern: String,
-    pub path:           String,
+    pub search_path:    String,
     pub opt_flags:      Vec<OptFlag>
 }
 
@@ -32,7 +34,7 @@ impl UserInput {
     pub fn new_empty() -> Self {
         Self {
             search_pattern: String::new(),
-            path: String::new(),
+            search_path: String::new(),
             opt_flags: Vec::<OptFlag>::new()
         }
     }
@@ -48,41 +50,49 @@ pub fn parse_user_input_cli(input: Vec<String>) -> UserInput {
     // skip the path to the program
     it.next();
 
-    while let Some(s) = it.next() {
-        for c in s.chars() {
-            if c == '-' {
-                // multiple flags (only optional -- flags that do not require arguments)
-                if s.len() > 2 {
-                    user_input_parsed.opt_flags = parse_mult_opt_flags(&s);
+    // are we currently parsing a flag or not
+    let mut is_on_flag;
+
+    'outer: while let Some(curr_cli_arg) = it.next() {
+        is_on_flag = false;
+
+        'inner: for c in curr_cli_arg.bytes() {
+            if c == b'-' {
+                // multiple flags (only optional flags that do not require arguments)
+                if curr_cli_arg.len() > 2 {
+                    user_input_parsed.opt_flags = parse_mult_opt_flags(&curr_cli_arg[1..]);
+                    continue 'outer;
                 }
                 else {
-                    // single flag, can only be non-optional flag, with argument
-                    match &s[..] {
-                        FLAG_PATH => {
-                            match it.next() {
-                                Some(path) => {
-                                    user_input_parsed.path = path;
-                                },
-                                None => {
-                                    eprintln!("Argument for the file path is not provided");
-                                    cli_output::print_help_info();
-                                    std::process::exit(0);
-                                }
-                            }
+                    is_on_flag = true;
+                    continue 'inner;
+                }
+            }
+            else {
+                if is_opt_flag(c) {
+                    user_input_parsed.opt_flags.push(match_opt_flag(c));
+                }
+                else if is_non_opt_flag(c) {
+                    match it.next() {
+                        Some(next_cli_arg) => {
+                            match_non_opt_flag(c, next_cli_arg, &mut user_input_parsed);
                         },
-                        FLAG_SEARCH => {
-                            match it.next() {
-                                Some(search_pattern) => {
-                                    user_input_parsed.search_pattern = search_pattern;
-                                },
-                                None => {
-                                    eprintln!("Argument for the search pattern is not provided");
-                                    cli_output::print_help_info();
-                                    std::process::exit(0);
-                                }
-                            }
-                        },
-                        _ => ()
+                        None => {
+                            eprintln!("Argument for non-optional flag {} is missing", c as char);
+                            cli_output::print_help_info();
+                            std::process::exit(1);
+                        }
+                    }
+                }
+                else {
+                    if is_on_flag {
+                        eprintln!("Unknown flag provided: {}", c as char);
+                        cli_output::print_opt_flags();
+                        std::process::exit(1);
+                    } else {
+                        eprintln!("Unknown input provided: {}", &curr_cli_arg);
+                        cli_output::print_help_info();
+                        std::process::exit(1);
                     }
                 }
             }
@@ -92,23 +102,63 @@ pub fn parse_user_input_cli(input: Vec<String>) -> UserInput {
     return user_input_parsed;
 }
 
-fn parse_mult_opt_flags(flags: &String) -> Vec<OptFlag> {
+fn parse_mult_opt_flags(flags: &str) -> Vec<OptFlag> {
     let mut flags_res = Vec::<OptFlag>::new();
 
     for c in flags.bytes() {
-        match c {
-            OPT_FLAG_HELP => flags_res.push(OptFlag::Help),
-            OPT_FLAG_DIR => flags_res.push(OptFlag::Dir),
-            OPT_FLAG_RECURSIVE => flags_res.push(OptFlag::Recursive),
-            OPT_FLAG_IGNORE_CASE => flags_res.push(OptFlag::IgnoreCase),
-            OPT_FLAG_LINE_NUMBERS => flags_res.push(OptFlag::LineNumbers),
-            OPT_FLAG_QUIET => flags_res.push(OptFlag::Quiet),
-            _ => {
-                eprintln!("Unknown flag provided: {}", c);
-                cli_output::print_opt_flags();
-            }
+        if is_opt_flag(c) {
+            flags_res.push(match_opt_flag(c));
+        }
+        else {
+            eprintln!("Unknown optional flag provided: {}", c as char);
+            print_opt_flags();
+            std::process::exit(1);
         }
     }
 
     return flags_res;
+}
+
+fn match_non_opt_flag(flag: u8, argument: String, user_input: &mut UserInput) {
+    match flag {
+        FLAG_SEARCH => {
+            user_input.search_pattern = argument;
+        },
+        FLAG_PATH => {
+            user_input.search_path = argument;
+        }
+        _ => unreachable!(),
+    }
+}
+
+fn match_opt_flag(opt_flag: u8) -> OptFlag {
+    match opt_flag {
+        OPT_FLAG_HELP => OptFlag::Help,
+        OPT_FLAG_DIR => OptFlag::Dir,
+        OPT_FLAG_RECURSIVE => OptFlag::Recursive,
+        OPT_FLAG_IGNORE_CASE => OptFlag::IgnoreCase,
+        OPT_FLAG_LINE_NUMBERS => OptFlag::LineNumbers,
+        OPT_FLAG_QUIET => OptFlag::Quiet,
+        _ => unreachable!(),
+    }
+}
+
+fn is_non_opt_flag(flag: u8) -> bool {
+    match flag {
+        FLAG_SEARCH => true,
+        FLAG_PATH => true,
+        _ => false,
+    }
+}
+
+fn is_opt_flag(opt_flag: u8) -> bool {
+    match opt_flag {
+        OPT_FLAG_HELP => true,
+        OPT_FLAG_DIR => true,
+        OPT_FLAG_RECURSIVE => true,
+        OPT_FLAG_IGNORE_CASE => true,
+        OPT_FLAG_LINE_NUMBERS => true,
+        OPT_FLAG_QUIET => true,
+        _ => false,
+    }
 }

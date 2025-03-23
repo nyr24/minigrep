@@ -21,6 +21,4 @@ pub fn print_occurences_in_file(pattern: &String, file_data: &FileData) {
     for occurence in occurences.iter() {
         println!("\t{}", occurence);
     }
-
-    println!();
 }

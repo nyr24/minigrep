@@ -17,10 +17,10 @@ pub fn do_search(user_input: &UserInput) -> Vec<FileData> {
 
     if do_dir_search {
         file_search_data = Vec::with_capacity(10);
-        search_dir(&user_input.path, &mut file_search_data, do_recursive_search, be_quiet);
+        search_dir(&user_input.search_path, &mut file_search_data, do_recursive_search, be_quiet);
     } else {
         file_search_data = Vec::with_capacity(1);
-        let file_data = get_file_data(&user_input.path, be_quiet);
+        let file_data = get_file_data(&user_input.search_path, be_quiet);
         file_search_data.push(file_data);
     }
 
@@ -35,26 +35,26 @@ fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: b
                 if !quiet {
                     eprintln!("Permission denied to access dir by path: {}", search_path);
                 }
-                panic!();
+                std::process::exit(1);
             },
             ErrorKind::NotADirectory => {
                 if !quiet {
                     eprintln!("Found a file, not a directory with provided path: {}", search_path);
                     eprintln!("Consider unspecify flags -d,-r if presented");
                 }
-                panic!();
+                std::process::exit(1);
             },
             ErrorKind::NotFound => {
                 if !quiet {
                     eprintln!("Directory wasn't found by path: {}", search_path);
                 }
-                panic!();
+                std::process::exit(1);
             },
             _ => {
                 if !quiet {
                     eprintln!("Unexpected error occured when opening directory")
                 }
-                panic!()
+                std::process::exit(1)
             }
         }
     };
@@ -113,29 +113,58 @@ fn get_file_data(file_path: &str, quiet: bool) -> FileData {
                 if !quiet {
                     eprintln!("Permission denied for file access at path: {}", file_path);
                 }
-                panic!();
+                std::process::exit(1);
             },
             ErrorKind::NotFound => {
                 if !quiet {
                     eprintln!("File wasn't found at path: {}", file_path);
                 }
-                panic!();
+                std::process::exit(1);
             },
             ErrorKind::IsADirectory => {
                 if !quiet {
                     eprintln!("Directory found at path, not a file: {}", file_path);
+                    eprintln!("Consider specify flags for directory search: -d,-r");
                 }
-                panic!();
+                std::process::exit(1);
             },
             _ => {
                 eprintln!("Unexpected error");
-                panic!();
+                std::process::exit(1);
             }
         }
     };
 
     let mut contents_buff = String::new();
-    File::read_to_string(&mut file, &mut contents_buff).expect("File was not readed to the end");
+
+    match file.read_to_string(&mut contents_buff) {
+        Ok(_) => (),
+        Err(err) => match err.kind() {
+            ErrorKind::PermissionDenied => {
+                if !quiet {
+                    eprintln!("Permission denied for file access at path: {}", file_path);
+                }
+                std::process::exit(1);
+            },
+            ErrorKind::NotFound => {
+                if !quiet {
+                    eprintln!("File wasn't found at path: {}", file_path);
+                }
+                std::process::exit(1);
+            },
+            ErrorKind::IsADirectory => {
+                if !quiet {
+                    eprintln!("Directory found at path, not a file: {}", file_path);
+                }
+                std::process::exit(1);
+            },
+            _ => {
+                eprintln!("Unexpected error");
+                std::process::exit(1);
+            }
+        }
+    }
+
     let file_tokens = parse_to_tokens(&contents_buff);
     let file_path = String::from_str(file_path).unwrap();
 
@@ -153,23 +182,23 @@ fn get_file_tokens(file_path: &str, quiet: bool) -> Vec<String> {
                 if !quiet {
                     eprintln!("Permission denied for file access at path: {}", file_path);
                 }
-                panic!();
+                std::process::exit(1);
             },
             ErrorKind::NotFound => {
                 if !quiet {
                     eprintln!("File wasn't found at path: {}", file_path);
                 }
-                panic!();
+                std::process::exit(1);
             },
             ErrorKind::IsADirectory => {
                 if !quiet {
                     eprintln!("Directory found at path, not a file: {}", file_path);
                 }
-                panic!();
+                std::process::exit(1);
             },
             _ => {
                 eprintln!("Unexpected error");
-                panic!();
+                std::process::exit(1);
             }
         }
     };
