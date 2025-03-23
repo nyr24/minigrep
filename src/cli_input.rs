@@ -21,21 +21,23 @@ pub enum OptFlag {
 
 // non-optional flags (argument expected)
 const FLAG_SEARCH: u8 = b's';
-const _FLAG_OUTPUT_TO_FILE: u8 = b'f';
+const FLAG_OUTPUT_TO_FILE: u8 = b'f';
 const FLAG_PATH: u8 = b'p';
 
 pub struct UserInput {
-    pub search_pattern: String,
-    pub search_path:    String,
-    pub opt_flags:      Vec<OptFlag>
+    pub search_pattern:     String,
+    pub search_path:        String,
+    pub output_file_path:   Option<String>,
+    pub opt_flags:          Vec<OptFlag>
 }
 
 impl UserInput {
     pub fn new_empty() -> Self {
         Self {
-            search_pattern: String::new(),
-            search_path: String::new(),
-            opt_flags: Vec::<OptFlag>::new()
+            search_pattern:     String::new(),
+            search_path:        String::new(),
+            output_file_path:   None,
+            opt_flags:          Vec::<OptFlag>::new()
         }
     }
 
@@ -121,12 +123,9 @@ fn parse_mult_opt_flags(flags: &str) -> Vec<OptFlag> {
 
 fn match_non_opt_flag(flag: u8, argument: String, user_input: &mut UserInput) {
     match flag {
-        FLAG_SEARCH => {
-            user_input.search_pattern = argument;
-        },
-        FLAG_PATH => {
-            user_input.search_path = argument;
-        }
+        FLAG_SEARCH => user_input.search_pattern = argument,
+        FLAG_PATH => user_input.search_path = argument,
+        FLAG_OUTPUT_TO_FILE => user_input.output_file_path = Some(argument),
         _ => unreachable!(),
     }
 }
@@ -147,6 +146,7 @@ fn is_non_opt_flag(flag: u8) -> bool {
     match flag {
         FLAG_SEARCH => true,
         FLAG_PATH => true,
+        FLAG_OUTPUT_TO_FILE => true,
         _ => false,
     }
 }

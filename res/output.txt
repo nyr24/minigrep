@@ -1,0 +1,7 @@
+./res/stuff/test2.txt
+	abouto
+	culto
+./res/stuff/stuff_hello.txt
+	to
+	Americanto
+	Standardsto

@@ -1,5 +1,5 @@
 use self::cli_input::OptFlag;
-use self::cli_output::print_occurences_in_file;
+use self::cli_output::{print_occurences_in_file, write_occurences_to_output_file};
 use self::fs_related::do_search;
 
 mod cli_input;
@@ -21,7 +21,18 @@ fn main() {
     }
 
     let file_data = do_search(&user_input);
-    for file_d in file_data.iter() {
-        print_occurences_in_file(&user_input.search_pattern, file_d);
+
+    match user_input.output_file_path {
+        Some(output_file_path) => {
+            for file_d in file_data.iter() {
+                write_occurences_to_output_file(&user_input.search_pattern, file_d, &output_file_path);
+            }
+        },
+        None => {
+            for file_d in file_data.iter() {
+                print_occurences_in_file(&user_input.search_pattern, file_d);
+            }
+        }
     }
+
 }
