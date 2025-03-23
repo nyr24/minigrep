@@ -1,4 +1,4 @@
-use crate::cli_output::{self, print_opt_flags};
+use crate::cli_output;
 
 // optional flags
 const OPT_FLAG_HELP: u8         = b'h';
@@ -111,7 +111,7 @@ fn parse_mult_opt_flags(flags: &str) -> Vec<OptFlag> {
         }
         else {
             eprintln!("Unknown optional flag provided: {}", c as char);
-            print_opt_flags();
+            cli_output::print_opt_flags();
             std::process::exit(1);
         }
     }
