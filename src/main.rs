@@ -22,15 +22,15 @@ fn main() {
 
     let file_data = do_search(&user_input);
 
-    match user_input.output_file_path {
+    match &user_input.output_file_path {
         Some(output_file_path) => {
             for file_d in file_data.iter() {
-                write_occurences_to_output_file(&user_input.search_pattern, file_d, &output_file_path);
+                write_occurences_to_output_file(&user_input.search_pattern, file_d, output_file_path, &user_input);
             }
         },
         None => {
             for file_d in file_data.iter() {
-                print_occurences_in_file(&user_input.search_pattern, file_d);
+                print_occurences_in_file(&user_input.search_pattern, file_d, &user_input);
             }
         }
     }

@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{ErrorKind, Write};
 
+use crate::cli_input::{OptFlag, UserInput};
 use crate::fs_related::FileData;
 use crate::str_pattern_match;
 
@@ -17,8 +18,11 @@ pub fn print_opt_flags() {
     println!("\t-i -- ignore case in $pattern and occurences");
 }
 
-pub fn print_occurences_in_file(pattern: &String, file_data: &FileData) {
-    let occurences = str_pattern_match::find_occurences(&file_data.file_tokens, &pattern);
+pub fn print_occurences_in_file(pattern: &String, file_data: &FileData, user_input: &UserInput) {
+    let ignore_case = user_input.has_opt_flag(OptFlag::IgnoreCase);
+    let cyrillic_mode = user_input.has_opt_flag(OptFlag::CyrillicMode);
+
+    let occurences = str_pattern_match::find_occurences(&file_data.file_tokens, &pattern, ignore_case, cyrillic_mode);
     println!("{}", file_data.file_path);
 
     for occurence in occurences.iter() {
@@ -26,7 +30,7 @@ pub fn print_occurences_in_file(pattern: &String, file_data: &FileData) {
     }
 }
 
-pub fn write_occurences_to_output_file(pattern: &String, file_data: &FileData, output_file_path: &String) {
+pub fn write_occurences_to_output_file(pattern: &String, file_data: &FileData, output_file_path: &String, user_input: &UserInput) {
     let mut output_file = match File::options().append(true).create(true).open(output_file_path) {
         Ok(opened_file) => opened_file,
         Err(err) => match err.kind() {
@@ -45,7 +49,10 @@ pub fn write_occurences_to_output_file(pattern: &String, file_data: &FileData, o
         }
     };
 
-    let occurences = str_pattern_match::find_occurences(&file_data.file_tokens, &pattern);
+    let ignore_case = user_input.has_opt_flag(OptFlag::IgnoreCase);
+    let cyrillic_mode = user_input.has_opt_flag(OptFlag::CyrillicMode);
+
+    let occurences = str_pattern_match::find_occurences(&file_data.file_tokens, &pattern, ignore_case, cyrillic_mode);
     let _ = output_file.write(file_data.file_path.as_bytes()).expect("Writing to the file failed");
     let _ = output_file.write(b"\n");
 

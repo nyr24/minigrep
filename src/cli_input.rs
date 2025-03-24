@@ -1,12 +1,13 @@
 use crate::cli_output;
 
 // optional flags
-const OPT_FLAG_HELP: u8         = b'h';
-const OPT_FLAG_DIR: u8          = b'd';
-const OPT_FLAG_RECURSIVE: u8    = b'r';
-const OPT_FLAG_IGNORE_CASE: u8  = b'i';
-const OPT_FLAG_LINE_NUMBERS: u8 = b'n';
-const OPT_FLAG_QUIET: u8        = b'q';
+const OPT_FLAG_HELP: u8             = b'h';
+const OPT_FLAG_DIR: u8              = b'd';
+const OPT_FLAG_RECURSIVE: u8        = b'r';
+const OPT_FLAG_LINE_NUMBERS: u8     = b'n';
+const OPT_FLAG_QUIET: u8            = b'q';
+const OPT_FLAG_IGNORE_CASE: u8      = b'i';
+const OPT_FLAG_CYRILLIC_MODE: u8    = b'c';
 
 #[derive(PartialEq)]
 #[repr(u8)]
@@ -14,9 +15,10 @@ pub enum OptFlag {
     Help = OPT_FLAG_HELP,
     Dir = OPT_FLAG_DIR,
     Recursive = OPT_FLAG_RECURSIVE,
-    IgnoreCase = OPT_FLAG_IGNORE_CASE,
     LineNumbers = OPT_FLAG_LINE_NUMBERS,
     Quiet = OPT_FLAG_QUIET,
+    IgnoreCase = OPT_FLAG_IGNORE_CASE,
+    CyrillicMode = OPT_FLAG_CYRILLIC_MODE,
 }
 
 // non-optional flags (argument expected)
@@ -135,9 +137,10 @@ fn match_opt_flag(opt_flag: u8) -> OptFlag {
         OPT_FLAG_HELP => OptFlag::Help,
         OPT_FLAG_DIR => OptFlag::Dir,
         OPT_FLAG_RECURSIVE => OptFlag::Recursive,
-        OPT_FLAG_IGNORE_CASE => OptFlag::IgnoreCase,
         OPT_FLAG_LINE_NUMBERS => OptFlag::LineNumbers,
         OPT_FLAG_QUIET => OptFlag::Quiet,
+        OPT_FLAG_IGNORE_CASE => OptFlag::IgnoreCase,
+        OPT_FLAG_CYRILLIC_MODE => OptFlag::CyrillicMode,
         _ => unreachable!(),
     }
 }
@@ -156,9 +159,10 @@ fn is_opt_flag(opt_flag: u8) -> bool {
         OPT_FLAG_HELP => true,
         OPT_FLAG_DIR => true,
         OPT_FLAG_RECURSIVE => true,
-        OPT_FLAG_IGNORE_CASE => true,
         OPT_FLAG_LINE_NUMBERS => true,
         OPT_FLAG_QUIET => true,
+        OPT_FLAG_IGNORE_CASE => true,
+        OPT_FLAG_CYRILLIC_MODE => true,
         _ => false,
     }
 }
