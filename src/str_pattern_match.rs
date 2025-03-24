@@ -16,86 +16,37 @@ pub fn find_occurences(tokens: &Vec<String>, pattern: &String, ignore_case: bool
 }
 
 fn match_str(search: &str, pattern: &str, ignore_case: bool, cyrillic_mode: bool) -> bool {
+    let search_as_vec: Vec<u8> = search.bytes().collect();
+    let pattern_as_vec: Vec<u8> = pattern.bytes().collect();
+
     if !cyrillic_mode {
-        return match_str_ascii(search, pattern, ignore_case)
+        return match_vecs::<u8>(&search_as_vec, &pattern_as_vec, ignore_case, UP_TO_LOW_CASE_OFFSET_ASCII)
     } else {
-        return match_str_cyrillic(search, pattern, ignore_case)
+        let search_as_vec = transform_u8_vec_to_u16_vec(&search_as_vec);
+        let pattern_as_vec = transform_u8_vec_to_u16_vec(&pattern_as_vec);
+        return match_vecs::<u16>(&search_as_vec, &pattern_as_vec, ignore_case, UP_TO_LOW_CASE_OFFSET_CYRILLIC)
     }
 }
 
-fn match_str_ascii(search: &str, pattern: &str, ignore_case: bool) -> bool {
-    let search_as_vec: Vec<u8> = search.bytes().collect();
-    let pattern_as_vec: Vec<u8> = pattern.bytes().collect();
-    let search_len = search_as_vec.len();
-    let pattern_len = pattern_as_vec.len();
+fn match_vecs<T>(search: &Vec<T>, pattern: &Vec<T>, ignore_case: bool, up_to_low_offset: T) -> bool
+    where T: Copy + PartialEq + Sub + PartialOrd, <T as Sub>::Output: PartialEq<T>
+{
+    let search_len = search.len();
+    let pattern_len = pattern.len();
     let mut search_ind: usize = 0;
     let mut pattern_ind: usize = 0;
 
     while search_ind < search_len {
-        if cmp_chars(search_as_vec[search_ind], pattern_as_vec[pattern_ind], ignore_case,
-            UP_TO_LOW_CASE_OFFSET_ASCII) {
+        if cmp_chars::<T>(search[search_ind] as T, pattern[pattern_ind] as T,
+            ignore_case, up_to_low_offset) {
 
             let mut curr_search_ind = search_ind + 1;
             pattern_ind += 1;
 
             while   curr_search_ind < search_len &&
                     pattern_ind < pattern_len &&
-                    cmp_chars(search_as_vec[curr_search_ind], pattern_as_vec[pattern_ind], ignore_case,
-                    UP_TO_LOW_CASE_OFFSET_ASCII)
-            {
-
-                curr_search_ind += 1;
-                pattern_ind += 1;
-
-                // end of 'search' reached
-                if curr_search_ind >= search_len {
-                    if pattern_ind == pattern_len {
-                        return true;
-                    }
-                    return false;
-                }
-            }
-
-            // we found a match
-            if pattern_ind == pattern_len {
-                return true;
-            }
-            else {
-                pattern_ind = 0;
-                search_ind += 1;
-            }
-        }
-        else {
-            search_ind += 1;
-        }
-    }
-
-    return false;
-}
-
-fn match_str_cyrillic(search: &str, pattern: &str, ignore_case: bool) -> bool {
-    let search_as_vec: Vec<u8> = search.bytes().collect();
-    let pattern_as_vec: Vec<u8> = pattern.bytes().collect();
-
-    let search_as_vec = transform_u8_vec_to_u16_vec(&search_as_vec);
-    let pattern_as_vec = transform_u8_vec_to_u16_vec(&pattern_as_vec);
-
-    let search_len = search_as_vec.len();
-    let pattern_len = pattern_as_vec.len();
-    let mut search_ind: usize = 0;
-    let mut pattern_ind: usize = 0;
-
-    while search_ind < search_len {
-        if cmp_chars(search_as_vec[search_ind], pattern_as_vec[pattern_ind], ignore_case,
-            UP_TO_LOW_CASE_OFFSET_CYRILLIC) {
-
-            let mut curr_search_ind = search_ind + 1;
-            pattern_ind += 1;
-
-            while   curr_search_ind < search_len &&
-                    pattern_ind < pattern_len &&
-                    cmp_chars(search_as_vec[curr_search_ind], pattern_as_vec[pattern_ind], ignore_case,
-                    UP_TO_LOW_CASE_OFFSET_CYRILLIC)
+                    cmp_chars::<T>(search[curr_search_ind] as T, pattern[pattern_ind] as T,
+                    ignore_case, up_to_low_offset)
             {
 
                 curr_search_ind += 1;
