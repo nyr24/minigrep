@@ -3,31 +3,42 @@ use std::io::{ErrorKind, Read};
 use std::str::FromStr;
 use crate::cli_input::{UserInput, OptFlag};
 
+pub struct TokenWithLine {
+    pub contents: String,
+    pub line_num: usize,
+}
+
+pub enum Token {
+    TokenStr(String),
+    TokenStrLine(TokenWithLine),
+}
+
 pub struct FileData {
     pub file_path:          String,
-    pub file_tokens:        Vec<String>,
+    pub file_tokens:        Vec<Token>,
 }
 
 pub fn do_search(user_input: &UserInput) -> Vec<FileData> {
     let do_recursive_search = user_input.has_opt_flag(OptFlag::Recursive);
     let do_dir_search = do_recursive_search || user_input.has_opt_flag(OptFlag::Dir);
     let be_quiet = user_input.has_opt_flag(OptFlag::Quiet);
+    let line_numbers = user_input.has_opt_flag(OptFlag::LineNumbers);
 
     let mut file_search_data: Vec<FileData>;
 
     if do_dir_search {
         file_search_data = Vec::with_capacity(10);
-        search_dir(&user_input.search_path, &mut file_search_data, do_recursive_search, be_quiet);
+        search_dir(&user_input.search_path, &mut file_search_data, do_recursive_search, be_quiet, line_numbers);
     } else {
         file_search_data = Vec::with_capacity(1);
-        let file_data = get_file_data(&user_input.search_path, be_quiet);
+        let file_data = get_file_data(&user_input.search_path, be_quiet, line_numbers);
         file_search_data.push(file_data);
     }
 
     return file_search_data;
 }
 
-fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: bool, quiet: bool) {
+fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: bool, quiet: bool, line_numbers: bool) {
     let dir_iter = match std::fs::read_dir(search_path) {
         Ok(it) => it,
         Err(err) => match err.kind() {
@@ -77,7 +88,7 @@ fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: b
 
                     // if entry is file
                     if FileType::is_file(&file_type) {
-                        let file_tokens = get_file_tokens(&entry_full_path, quiet);
+                        let file_tokens = get_file_tokens(&entry_full_path, quiet, line_numbers);
 
                         let file_data = FileData {
                             file_path: entry_full_path,
@@ -88,7 +99,7 @@ fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: b
                     }
                     // if entry is dir
                     else if recursive && FileType::is_dir(&file_type) {
-                        search_dir(&entry_full_path, file_data_out, recursive, quiet);
+                        search_dir(&entry_full_path, file_data_out, recursive, quiet, line_numbers);
                     }
                 } else {
                     if !quiet {
@@ -105,7 +116,7 @@ fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: b
     }
 }
 
-fn get_file_data(file_path: &str, quiet: bool) -> FileData {
+fn get_file_data(file_path: &str, quiet: bool, line_numbers: bool) -> FileData {
     let mut file = match File::open(file_path) {
         Ok(f) => f,
         Err(err) => match err.kind() {
@@ -165,7 +176,7 @@ fn get_file_data(file_path: &str, quiet: bool) -> FileData {
         }
     }
 
-    let file_tokens = parse_to_tokens(&contents_buff);
+    let file_tokens = parse_to_tokens(&contents_buff, line_numbers);
     let file_path = String::from_str(file_path).unwrap();
 
     return FileData {
@@ -174,7 +185,7 @@ fn get_file_data(file_path: &str, quiet: bool) -> FileData {
     }
 }
 
-fn get_file_tokens(file_path: &str, quiet: bool) -> Vec<String> {
+fn get_file_tokens(file_path: &str, quiet: bool, line_numbers: bool) -> Vec<Token> {
     let mut file = match File::open(file_path) {
         Ok(file) => file,
         Err(err) => match err.kind() {
@@ -205,23 +216,27 @@ fn get_file_tokens(file_path: &str, quiet: bool) -> Vec<String> {
 
     let mut contents_buff = String::new();
     File::read_to_string(&mut file, &mut contents_buff).expect("File was not readed to the end");
-    let file_tokens = parse_to_tokens(&contents_buff);
+    let file_tokens = parse_to_tokens(&contents_buff, line_numbers);
 
     return file_tokens;
 }
 
-fn parse_to_tokens(file_contents: &String) -> Vec<String> {
-    let mut tokens = Vec::<String>::with_capacity(file_contents.len() / 5);
+fn parse_to_tokens(file_contents: &String, line_numbers: bool) -> Vec<Token> {
+    let mut tokens = Vec::<Token>::with_capacity(file_contents.len() / 5);
 
     let it: Vec<char> = file_contents.chars().collect();
     let len = it.len();
     let mut ind: usize = 0;
     let mut curr_slice: &str;
     let mut curr_slice_start: usize;
+    let mut curr_line_num: usize = 0;
 
     while ind < len {
         // skipping whitespace
         while ind < len && char::is_whitespace(it[ind]) {
+            if line_numbers && it[ind] == '\n' {
+                curr_line_num += 1;
+            }
             ind += 1;
         }
 
@@ -237,7 +252,15 @@ fn parse_to_tokens(file_contents: &String) -> Vec<String> {
 
         if ind - curr_slice_start != 0 {
             curr_slice = &file_contents[curr_slice_start..ind];
-            tokens.push(String::from_str(curr_slice).unwrap());
+            if line_numbers {
+                let new_token = TokenWithLine {
+                    contents: String::from_str(curr_slice).unwrap(),
+                    line_num: curr_line_num,
+                };
+                tokens.push(Token::TokenStrLine(new_token));
+            } else {
+                tokens.push(Token::TokenStr(String::from_str(curr_slice).unwrap()));
+            }
         }
     }
 

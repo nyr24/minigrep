@@ -1,13 +1,24 @@
 use std::ops::Sub;
 
+use crate::fs_related::Token;
+
 const UP_TO_LOW_CASE_OFFSET_ASCII: u8 = b'a' - b'A';
 
-pub fn find_occurences(tokens: &Vec<String>, pattern: &String, ignore_case: bool) -> Vec<String> {
-    let mut occurences = Vec::<String>::with_capacity(tokens.len() / 3);
+pub fn find_occurences(tokens: Vec<Token>, pattern: &String, ignore_case: bool) -> Vec<Token> {
+    let mut occurences = Vec::<Token>::with_capacity(tokens.len() / 3);
  
     for token in tokens {
-        if match_str(token, pattern, ignore_case) {
-            occurences.push(token.clone());
+        match token {
+            Token::TokenStr(ref token_str) => {
+                if match_str(&token_str, pattern, ignore_case) {
+                    occurences.push(token);
+                }
+            },
+            Token::TokenStrLine(ref token_line) => {
+                if match_str(&token_line.contents, pattern, ignore_case) {
+                    occurences.push(token);
+                }
+            }
         }
     }
 

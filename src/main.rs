@@ -24,12 +24,12 @@ fn main() {
 
     match &user_input.output_file_path {
         Some(output_file_path) => {
-            for file_d in file_data.iter() {
+            for file_d in file_data {
                 write_occurences_to_output_file(&user_input.search_pattern, file_d, output_file_path, &user_input);
             }
         },
         None => {
-            for file_d in file_data.iter() {
+            for file_d in file_data {
                 print_occurences_in_file(&user_input.search_pattern, file_d, &user_input);
             }
         }
