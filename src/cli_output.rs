@@ -14,8 +14,10 @@ pub fn print_help_info() {
 pub fn print_opt_flags() {
     println!("Options can be:");
     println!("\t-h -- provide information about usage of program");
-    println!("\t-r -- do recursive search staring from $filepath");
+    println!("\t-d -- search a directory starting from $filepath (by default program expect a file)");
+    println!("\t-r -- do recursive search starting from $filepath");
     println!("\t-i -- ignore case in $pattern and occurences");
+    println!("\t-n -- output line numbers");
 }
 
 pub fn print_occurences_in_file(pattern: &String, file_data: FileData, user_input: &UserInput) {
