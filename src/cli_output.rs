@@ -20,9 +20,8 @@ pub fn print_opt_flags() {
 
 pub fn print_occurences_in_file(pattern: &String, file_data: &FileData, user_input: &UserInput) {
     let ignore_case = user_input.has_opt_flag(OptFlag::IgnoreCase);
-    let cyrillic_mode = user_input.has_opt_flag(OptFlag::CyrillicMode);
 
-    let occurences = str_pattern_match::find_occurences(&file_data.file_tokens, &pattern, ignore_case, cyrillic_mode);
+    let occurences = str_pattern_match::find_occurences(&file_data.file_tokens, &pattern, ignore_case);
     println!("{}", file_data.file_path);
 
     for occurence in occurences.iter() {
@@ -50,9 +49,8 @@ pub fn write_occurences_to_output_file(pattern: &String, file_data: &FileData, o
     };
 
     let ignore_case = user_input.has_opt_flag(OptFlag::IgnoreCase);
-    let cyrillic_mode = user_input.has_opt_flag(OptFlag::CyrillicMode);
 
-    let occurences = str_pattern_match::find_occurences(&file_data.file_tokens, &pattern, ignore_case, cyrillic_mode);
+    let occurences = str_pattern_match::find_occurences(&file_data.file_tokens, &pattern, ignore_case);
     let _ = output_file.write(file_data.file_path.as_bytes()).expect("Writing to the file failed");
     let _ = output_file.write(b"\n");
 

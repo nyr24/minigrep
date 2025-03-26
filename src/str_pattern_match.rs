@@ -1,13 +1,12 @@
 use std::ops::Sub;
 
 const UP_TO_LOW_CASE_OFFSET_ASCII: u8 = b'a' - b'A';
-const UP_TO_LOW_CASE_OFFSET_CYRILLIC: u16 = 'а' as u16 - 'А' as u16;
 
-pub fn find_occurences(tokens: &Vec<String>, pattern: &String, ignore_case: bool, cyrillic_mode: bool) -> Vec<String> {
+pub fn find_occurences(tokens: &Vec<String>, pattern: &String, ignore_case: bool) -> Vec<String> {
     let mut occurences = Vec::<String>::with_capacity(tokens.len() / 3);
  
     for token in tokens {
-        if match_str(token, pattern, ignore_case, cyrillic_mode) {
+        if match_str(token, pattern, ignore_case) {
             occurences.push(token.clone());
         }
     }
@@ -15,17 +14,10 @@ pub fn find_occurences(tokens: &Vec<String>, pattern: &String, ignore_case: bool
     return occurences;
 }
 
-fn match_str(search: &str, pattern: &str, ignore_case: bool, cyrillic_mode: bool) -> bool {
+fn match_str(search: &str, pattern: &str, ignore_case: bool) -> bool {
     let search_as_vec: Vec<u8> = search.bytes().collect();
     let pattern_as_vec: Vec<u8> = pattern.bytes().collect();
-
-    if !cyrillic_mode {
-        return match_vecs::<u8>(&search_as_vec, &pattern_as_vec, ignore_case, UP_TO_LOW_CASE_OFFSET_ASCII)
-    } else {
-        let search_as_vec = transform_u8_vec_to_u16_vec(&search_as_vec);
-        let pattern_as_vec = transform_u8_vec_to_u16_vec(&pattern_as_vec);
-        return match_vecs::<u16>(&search_as_vec, &pattern_as_vec, ignore_case, UP_TO_LOW_CASE_OFFSET_CYRILLIC)
-    }
+    return match_vecs::<u8>(&search_as_vec, &pattern_as_vec, ignore_case, UP_TO_LOW_CASE_OFFSET_ASCII)
 }
 
 fn match_vecs<T>(search: &Vec<T>, pattern: &Vec<T>, ignore_case: bool, up_to_low_offset: T) -> bool
@@ -92,31 +84,4 @@ fn cmp_chars<T>(c1: T, c2: T, ignore_case: bool, up_to_low_offset: T) -> bool
     } else {
         return c1 == c2
     }
-}
-
-fn transform_u8_vec_to_u16_vec(input: &Vec<u8>) -> Vec<u16> {
-    let len = input.len();
-    let is_odd_len = len & 1 == 1;
-    let capacity = if is_odd_len { (len + 1) / 2 } else { len / 2 };
-    let mut output = Vec::<u16>::with_capacity(capacity);
-    let mut curr_output_u16: u16 = 0;
-    let mut curr_byte_tuple: (u8, u8) = (0, 0);
-
-    for (i, byte) in input.iter().enumerate() {
-        if i & 1 == 0 {
-            curr_byte_tuple.0 = *byte;
-        } else {
-            curr_byte_tuple.1 = *byte;
-            curr_output_u16 |= curr_byte_tuple.0 as u16;
-            curr_output_u16 |= curr_byte_tuple.1 as u16;
- 
-            output.push(curr_output_u16);
-
-            curr_output_u16 = 0;
-            curr_byte_tuple.0 = 0;
-            curr_byte_tuple.1 = 0;
-        }
-    }
-
-    return output;
 }
