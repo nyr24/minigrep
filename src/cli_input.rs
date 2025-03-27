@@ -1,4 +1,5 @@
 use crate::cli_output;
+use crate::fs_related::char_slice_to_str;
 
 // optional flags
 const OPT_FLAG_HELP: u8             = b'h';
@@ -23,11 +24,13 @@ pub enum OptFlag {
 const FLAG_SEARCH: u8 = b's';
 const FLAG_OUTPUT_TO_FILE: u8 = b'f';
 const FLAG_PATH: u8 = b'p';
+const FLAG_EXCLUDE_PATHS: u8 = b'e';
 
 pub struct UserInput {
     pub search_pattern:     String,
     pub search_path:        String,
     pub output_file_path:   Option<String>,
+    pub exclude_paths:      Option<Vec<String>>,
     pub opt_flags:          Vec<OptFlag>
 }
 
@@ -37,6 +40,7 @@ impl UserInput {
             search_pattern:     String::new(),
             search_path:        String::new(),
             output_file_path:   None,
+            exclude_paths:      None,
             opt_flags:          Vec::<OptFlag>::new()
         }
     }
@@ -126,6 +130,7 @@ fn match_non_opt_flag(flag: u8, argument: String, user_input: &mut UserInput) {
         FLAG_SEARCH => user_input.search_pattern = argument,
         FLAG_PATH => user_input.search_path = argument,
         FLAG_OUTPUT_TO_FILE => user_input.output_file_path = Some(argument),
+        FLAG_EXCLUDE_PATHS => user_input.exclude_paths = parse_exclude_paths(&argument, ','),
         _ => unreachable!(),
     }
 }
@@ -147,6 +152,7 @@ fn is_non_opt_flag(flag: u8) -> bool {
         FLAG_SEARCH => true,
         FLAG_PATH => true,
         FLAG_OUTPUT_TO_FILE => true,
+        FLAG_EXCLUDE_PATHS => true,
         _ => false,
     }
 }
@@ -161,4 +167,34 @@ fn is_opt_flag(opt_flag: u8) -> bool {
         OPT_FLAG_IGNORE_CASE => true,
         _ => false,
     }
+}
+
+fn parse_exclude_paths(exclude_paths: &String, splitter: char) -> Option<Vec<String>> {
+    let exclude_paths = split_str_into_vec(&exclude_paths, splitter);
+    if exclude_paths.len() == 0 {
+        return None;
+    } else {
+        return Some(exclude_paths);
+    }
+}
+
+fn split_str_into_vec(s: &String, splitter: char) -> Vec<String> {
+    let mut result = Vec::<String>::with_capacity(s.len() / 5);
+    let char_vec: Vec<char> = s.chars().collect();
+    let char_vec_last_ind = char_vec.len() - 1;
+    let mut curr_slice_start: usize = 0;
+
+    for (ind, ch) in char_vec.iter().enumerate() {
+        if *ch == splitter && ((ind - curr_slice_start) > 0) {
+            let splitted_part = char_slice_to_str(&char_vec[curr_slice_start..ind]);
+            result.push(splitted_part);
+            curr_slice_start = ind + 1;
+        }
+        else if ind == char_vec_last_ind && (ind - curr_slice_start > 0) {
+            let splitted_part = char_slice_to_str(&char_vec[curr_slice_start..ind]);
+            result.push(splitted_part);
+        }
+    }
+
+    return result;
 }

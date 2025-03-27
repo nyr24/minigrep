@@ -28,18 +28,38 @@ pub fn do_search(user_input: &UserInput) -> Vec<FileData> {
 
     if do_dir_search {
         file_search_data = Vec::with_capacity(10);
-        search_dir(&user_input.search_path, &mut file_search_data, do_recursive_search, be_quiet, line_numbers);
+        match &user_input.exclude_paths {
+            Some(excl_paths) => {
+                if filter_path(&user_input.search_path, excl_paths) {
+                    search_dir(&user_input.search_path, &mut file_search_data, do_recursive_search, be_quiet, line_numbers, user_input.exclude_paths.as_ref());
+                }
+            },
+            None => {
+                search_dir(&user_input.search_path, &mut file_search_data, do_recursive_search, be_quiet, line_numbers, None);
+            }
+        }
     } else {
         file_search_data = Vec::with_capacity(1);
-        if let Some(file_data) = get_file_data(&user_input.search_path, be_quiet, line_numbers) {
-            file_search_data.push(file_data);
+        match &user_input.exclude_paths {
+            Some(excl_paths) => {
+                if filter_path(&user_input.search_path, excl_paths) {
+                    if let Some(file_data) = get_file_data(&user_input.search_path, be_quiet, line_numbers) {
+                        file_search_data.push(file_data);
+                    }
+                }
+            },
+            None => {
+                if let Some(file_data) = get_file_data(&user_input.search_path, be_quiet, line_numbers) {
+                    file_search_data.push(file_data);
+                }
+            }
         }
     }
 
     return file_search_data;
 }
 
-fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: bool, quiet: bool, line_numbers: bool) {
+fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: bool, quiet: bool, line_numbers: bool, exclude_paths: Option<&Vec<String>>) {
     let dir_iter = match std::fs::read_dir(search_path) {
         Ok(it) => it,
         Err(err) => match err.kind() {
@@ -66,7 +86,7 @@ fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: b
                 if !quiet {
                     eprintln!("Unexpected error occured when opening directory")
                 }
-                return ()
+                return ();
             }
         }
     };
@@ -92,17 +112,41 @@ fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: b
 
                     // if entry is file
                     if FileType::is_file(&file_type) {
-                        if let Some(tokens) = get_file_tokens(&entry_full_path, quiet, line_numbers) {
-                            let file_data = FileData {
-                                file_path: entry_full_path,
-                                file_tokens: tokens,
-                            };
-                            file_data_out.push(file_data);
-                        };
+                        match exclude_paths {
+                            Some(excl_paths) => {
+                                if filter_path(&entry_full_path, excl_paths) {
+                                    if let Some(tokens) = get_file_tokens(&entry_full_path, quiet, line_numbers) {
+                                        let file_data = FileData {
+                                            file_path: entry_full_path,
+                                            file_tokens: tokens,
+                                        };
+                                        file_data_out.push(file_data);
+                                    };
+                                }
+                            },
+                            None => {
+                                if let Some(tokens) = get_file_tokens(&entry_full_path, quiet, line_numbers) {
+                                    let file_data = FileData {
+                                        file_path: entry_full_path,
+                                        file_tokens: tokens,
+                                    };
+                                    file_data_out.push(file_data);
+                                };
+                            }
+                        }
                     }
                     // if entry is dir
                     else if recursive && FileType::is_dir(&file_type) {
-                        search_dir(&entry_full_path, file_data_out, recursive, quiet, line_numbers);
+                        match exclude_paths {
+                            Some(excl_paths) => {
+                                if filter_path(&entry_full_path, excl_paths) {
+                                    search_dir(&entry_full_path, file_data_out, recursive, quiet, line_numbers, exclude_paths);
+                                }
+                            },
+                            None => {
+                                search_dir(&entry_full_path, file_data_out, recursive, quiet, line_numbers, None);
+                            }
+                        }
                     }
                 } else {
                     if !quiet {
@@ -284,7 +328,7 @@ fn parse_to_tokens(file_contents: &String, line_numbers: bool) -> Vec<Token> {
     return tokens;
 }
 
-fn char_slice_to_str(char_slice: &[char]) -> String {
+pub fn char_slice_to_str(char_slice: &[char]) -> String {
     let mut s = String::with_capacity(char_slice.len());
 
     for c in char_slice {
@@ -292,4 +336,14 @@ fn char_slice_to_str(char_slice: &[char]) -> String {
     }
 
     return s;
+}
+
+fn filter_path(path: &String, exclude_paths: &Vec<String>) -> bool {
+    for excl_path in exclude_paths.iter() {
+        if path.contains(excl_path) {
+            return false;
+        }
+    }
+
+    return true;
 }

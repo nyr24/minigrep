@@ -6,9 +6,10 @@ use crate::fs_related::{FileData, Token};
 use crate::str_pattern_match;
 
 pub fn print_help_info() {
-    println!("Usage:");
-    println!("minigrep [options] -s $pattern -p $filepath [-f $output_to_file_path]");
+    println!("General Usage:");
+    println!("minigrep [options] -s $pattern -p $filepath");
     print_opt_flags();
+    print_arg_flags();
 }
 
 pub fn print_opt_flags() {
@@ -19,6 +20,13 @@ pub fn print_opt_flags() {
     println!("\t-i -- ignore case in $pattern and occurences");
     println!("\t-n -- output line numbers");
 }
+
+pub fn print_arg_flags() {
+    println!("You can also include options that accept an argument:");
+    println!("\t-f -- write all program output to the file, instead of stdin:\n-f $output_to_file_path");
+    println!("\t-e -- exclude searching from paths which contain patterns:\n-e .git,.png,.exe");
+}
+
 
 pub fn print_occurences_in_file(pattern: &String, file_data: FileData, user_input: &UserInput) {
     let ignore_case = user_input.has_opt_flag(OptFlag::IgnoreCase);
