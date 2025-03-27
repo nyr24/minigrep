@@ -25,13 +25,13 @@ pub fn find_occurences(tokens: Vec<Token>, pattern: &String, ignore_case: bool) 
     return occurences;
 }
 
-fn match_str(search: &str, pattern: &str, ignore_case: bool) -> bool {
-    let search_as_vec: Vec<u8> = search.bytes().collect();
-    let pattern_as_vec: Vec<u8> = pattern.bytes().collect();
-    return match_vecs::<u8>(&search_as_vec, &pattern_as_vec, ignore_case, UP_TO_LOW_CASE_OFFSET_ASCII)
+fn match_str(search: &String, pattern: &String, ignore_case: bool) -> bool {
+    let search_as_bytes = search.as_bytes();
+    let pattern_as_bytes = pattern.as_bytes();
+    return match_vecs::<u8>(search_as_bytes, pattern_as_bytes, ignore_case, UP_TO_LOW_CASE_OFFSET_ASCII)
 }
 
-fn match_vecs<T>(search: &Vec<T>, pattern: &Vec<T>, ignore_case: bool, up_to_low_offset: T) -> bool
+fn match_vecs<T>(search: &[T], pattern: &[T], ignore_case: bool, up_to_low_offset: T) -> bool
     where T: Copy + PartialEq + Sub + PartialOrd, <T as Sub>::Output: PartialEq<T>
 {
     let search_len = search.len();

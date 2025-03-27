@@ -11,7 +11,7 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
         cli_output::print_help_info();
-        std::process::exit(0);
+        std::process::exit(1);
     }
 
     let user_input = cli_input::parse_user_input_cli(args);

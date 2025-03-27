@@ -24,6 +24,10 @@ pub fn print_occurences_in_file(pattern: &String, file_data: FileData, user_inpu
     let ignore_case = user_input.has_opt_flag(OptFlag::IgnoreCase);
 
     let occurences = str_pattern_match::find_occurences(file_data.file_tokens, &pattern, ignore_case);
+    if occurences.len() == 0 {
+        return;
+    }
+
     println!("{}", file_data.file_path);
 
     for occurence in occurences.iter() {
@@ -44,15 +48,16 @@ pub fn write_occurences_to_output_file(pattern: &String, file_data: FileData, ou
         Err(err) => match err.kind() {
             ErrorKind::PermissionDenied => {
                 eprintln!("File for writing output to doesn't have a permission to access\nprovided path: {}", output_file_path);
-                std::process::exit(1);
+                return ();
             },
             ErrorKind::IsADirectory => {
                 eprintln!("File for writing output to is a directory\nprovided path: {}", output_file_path);
-                std::process::exit(1);
+                return ();
             },
             _ => {
                 eprintln!("Unknown error occurred when attempting to open the file for writing program output");
-                std::process::exit(1);
+                eprintln!("Path was: {}", output_file_path);
+                return ();
             }
         }
     };
@@ -60,6 +65,10 @@ pub fn write_occurences_to_output_file(pattern: &String, file_data: FileData, ou
     let ignore_case = user_input.has_opt_flag(OptFlag::IgnoreCase);
 
     let occurences = str_pattern_match::find_occurences(file_data.file_tokens, &pattern, ignore_case);
+    if occurences.len() == 0 {
+        return;
+    }
+
     let _ = output_file.write(file_data.file_path.as_bytes()).expect("Writing to the file failed");
     let _ = output_file.write(b"\n");
 

@@ -31,8 +31,9 @@ pub fn do_search(user_input: &UserInput) -> Vec<FileData> {
         search_dir(&user_input.search_path, &mut file_search_data, do_recursive_search, be_quiet, line_numbers);
     } else {
         file_search_data = Vec::with_capacity(1);
-        let file_data = get_file_data(&user_input.search_path, be_quiet, line_numbers);
-        file_search_data.push(file_data);
+        if let Some(file_data) = get_file_data(&user_input.search_path, be_quiet, line_numbers) {
+            file_search_data.push(file_data);
+        }
     }
 
     return file_search_data;
@@ -46,26 +47,26 @@ fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: b
                 if !quiet {
                     eprintln!("Permission denied to access dir by path: {}", search_path);
                 }
-                std::process::exit(1);
+                return ();
             },
             ErrorKind::NotADirectory => {
                 if !quiet {
                     eprintln!("Found a file, not a directory with provided path: {}", search_path);
                     eprintln!("Consider unspecify flags -d,-r if presented");
                 }
-                std::process::exit(1);
+                return ();
             },
             ErrorKind::NotFound => {
                 if !quiet {
                     eprintln!("Directory wasn't found by path: {}", search_path);
                 }
-                std::process::exit(1);
+                return ();
             },
             _ => {
                 if !quiet {
                     eprintln!("Unexpected error occured when opening directory")
                 }
-                std::process::exit(1)
+                return ()
             }
         }
     };
@@ -75,8 +76,11 @@ fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: b
             Ok(dir_entry) => {
                 if let Ok(file_type) = dir_entry.file_type() {
                     let entry_full_path = match dir_entry.path().to_str() {
-                        Some(s) => {
-                            String::from_str(s).unwrap()
+                        Some(slice) => {
+                            match String::from_str(slice) {
+                                Ok(s) => s,
+                                Err(_) => continue,
+                            }
                         },
                         None => {
                             if !quiet {
@@ -88,14 +92,13 @@ fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: b
 
                     // if entry is file
                     if FileType::is_file(&file_type) {
-                        let file_tokens = get_file_tokens(&entry_full_path, quiet, line_numbers);
-
-                        let file_data = FileData {
-                            file_path: entry_full_path,
-                            file_tokens,
+                        if let Some(tokens) = get_file_tokens(&entry_full_path, quiet, line_numbers) {
+                            let file_data = FileData {
+                                file_path: entry_full_path,
+                                file_tokens: tokens,
+                            };
+                            file_data_out.push(file_data);
                         };
-
-                        file_data_out.push(file_data);
                     }
                     // if entry is dir
                     else if recursive && FileType::is_dir(&file_type) {
@@ -116,7 +119,7 @@ fn search_dir(search_path: &str, file_data_out: &mut Vec<FileData>, recursive: b
     }
 }
 
-fn get_file_data(file_path: &str, quiet: bool, line_numbers: bool) -> FileData {
+fn get_file_data(file_path: &String, quiet: bool, line_numbers: bool) -> Option<FileData> {
     let mut file = match File::open(file_path) {
         Ok(f) => f,
         Err(err) => match err.kind() {
@@ -124,24 +127,26 @@ fn get_file_data(file_path: &str, quiet: bool, line_numbers: bool) -> FileData {
                 if !quiet {
                     eprintln!("Permission denied for file access at path: {}", file_path);
                 }
-                std::process::exit(1);
+                return None
             },
             ErrorKind::NotFound => {
                 if !quiet {
                     eprintln!("File wasn't found at path: {}", file_path);
                 }
-                std::process::exit(1);
+                return None
             },
             ErrorKind::IsADirectory => {
                 if !quiet {
                     eprintln!("Directory found at path, not a file: {}", file_path);
                     eprintln!("Consider specify flags for directory search: -d,-r");
                 }
-                std::process::exit(1);
+                return None
             },
             _ => {
-                eprintln!("Unexpected error");
-                std::process::exit(1);
+                if !quiet {
+                    eprintln!("Unexpected error when opening a file: {}", file_path);
+                }
+                return None
             }
         }
     };
@@ -155,23 +160,25 @@ fn get_file_data(file_path: &str, quiet: bool, line_numbers: bool) -> FileData {
                 if !quiet {
                     eprintln!("Permission denied for file access at path: {}", file_path);
                 }
-                std::process::exit(1);
+                return None
             },
             ErrorKind::NotFound => {
                 if !quiet {
                     eprintln!("File wasn't found at path: {}", file_path);
                 }
-                std::process::exit(1);
+                return None
             },
             ErrorKind::IsADirectory => {
                 if !quiet {
                     eprintln!("Directory found at path, not a file: {}", file_path);
                 }
-                std::process::exit(1);
+                return None
             },
             _ => {
-                eprintln!("Unexpected error");
-                std::process::exit(1);
+                if !quiet {
+                    eprintln!("Unexpected error for file access at path: {}", file_path);
+                }
+                return None
             }
         }
     }
@@ -179,13 +186,13 @@ fn get_file_data(file_path: &str, quiet: bool, line_numbers: bool) -> FileData {
     let file_tokens = parse_to_tokens(&contents_buff, line_numbers);
     let file_path = String::from_str(file_path).unwrap();
 
-    return FileData {
+    return Some(FileData {
         file_path,
         file_tokens,
-    }
+    });
 }
 
-fn get_file_tokens(file_path: &str, quiet: bool, line_numbers: bool) -> Vec<Token> {
+fn get_file_tokens(file_path: &str, quiet: bool, line_numbers: bool) -> Option<Vec<Token>> {
     let mut file = match File::open(file_path) {
         Ok(file) => file,
         Err(err) => match err.kind() {
@@ -193,32 +200,42 @@ fn get_file_tokens(file_path: &str, quiet: bool, line_numbers: bool) -> Vec<Toke
                 if !quiet {
                     eprintln!("Permission denied for file access at path: {}", file_path);
                 }
-                std::process::exit(1);
+                return None;
             },
             ErrorKind::NotFound => {
                 if !quiet {
                     eprintln!("File wasn't found at path: {}", file_path);
                 }
-                std::process::exit(1);
+                return None;
             },
             ErrorKind::IsADirectory => {
                 if !quiet {
                     eprintln!("Directory found at path, not a file: {}", file_path);
                 }
-                std::process::exit(1);
+                return None;
             },
             _ => {
-                eprintln!("Unexpected error");
-                std::process::exit(1);
+                eprintln!("Unexpected error for file access at path: {}", file_path);
+                return None;
             }
         }
     };
 
     let mut contents_buff = String::new();
-    File::read_to_string(&mut file, &mut contents_buff).expect("File was not readed to the end");
-    let file_tokens = parse_to_tokens(&contents_buff, line_numbers);
 
-    return file_tokens;
+    match File::read_to_string(&mut file, &mut contents_buff) {
+        Ok(_) => {
+            let file_tokens = parse_to_tokens(&contents_buff, line_numbers);
+            return Some(file_tokens);
+        },
+        Err(err) => {
+            if !quiet {
+                eprintln!("Error while reading a file from path: {}", file_path);
+                eprintln!("Error: {}", err);
+            }
+            return None
+        }
+    }
 }
 
 fn parse_to_tokens(file_contents: &String, line_numbers: bool) -> Vec<Token> {
@@ -227,7 +244,7 @@ fn parse_to_tokens(file_contents: &String, line_numbers: bool) -> Vec<Token> {
     let it: Vec<char> = file_contents.chars().collect();
     let len = it.len();
     let mut ind: usize = 0;
-    let mut curr_slice: &str;
+    let mut curr_slice: &[char];
     let mut curr_slice_start: usize;
     let mut curr_line_num: usize = 0;
 
@@ -251,18 +268,28 @@ fn parse_to_tokens(file_contents: &String, line_numbers: bool) -> Vec<Token> {
         }
 
         if ind - curr_slice_start != 0 {
-            curr_slice = &file_contents[curr_slice_start..ind];
+            curr_slice = &it[curr_slice_start..ind];
             if line_numbers {
                 let new_token = TokenWithLine {
-                    contents: String::from_str(curr_slice).unwrap(),
+                    contents: char_slice_to_str(curr_slice),
                     line_num: curr_line_num,
                 };
                 tokens.push(Token::TokenStrLine(new_token));
             } else {
-                tokens.push(Token::TokenStr(String::from_str(curr_slice).unwrap()));
+                tokens.push(Token::TokenStr(char_slice_to_str(curr_slice)));
             }
         }
     }
 
     return tokens;
+}
+
+fn char_slice_to_str(char_slice: &[char]) -> String {
+    let mut s = String::with_capacity(char_slice.len());
+
+    for c in char_slice {
+        s.push(*c);
+    }
+
+    return s;
 }
