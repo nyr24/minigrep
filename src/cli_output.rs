@@ -7,7 +7,7 @@ use crate::str_pattern_match;
 
 pub fn print_help_info() {
     println!("General Usage:");
-    println!("minigrep [options] -s $pattern -p $filepath");
+    println!("minigrep [options] -s $pattern -p $filepath [-f $output_to_file_path] [-e .git,.png,.exe]");
     print_opt_flags();
     print_arg_flags();
 }
@@ -15,6 +15,7 @@ pub fn print_help_info() {
 pub fn print_opt_flags() {
     println!("Options can be:");
     println!("\t-h -- provide information about usage of program");
+    println!("\t-q -- make program quiet, error logs would not be displayed, recommended");
     println!("\t-d -- search a directory starting from $filepath (by default program expect a file)");
     println!("\t-r -- do recursive search starting from $filepath");
     println!("\t-i -- ignore case in $pattern and occurences");
