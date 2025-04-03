@@ -10,7 +10,7 @@ Example of usage:
 ```
 minigrep [options] -s $pattern -p $filepath [-f $output_to_file_path] [-e .git,.png,.exe]
 ```
-Options can be:
+options are:
 - -h -- provide information about usage of the program
 - -q -- make program quiet, error logs would not be displayed, highly recommended
 - -d -- search a directory starting from $filepath (by default program expect a file)
@@ -18,6 +18,6 @@ Options can be:
 - -i -- ignore case in $pattern and occurences
 - -n -- output line numbers
 
-You can also include options that accept an argument:
-- -f -- write all program output to the file, instead of stdin:\n-f $output_to_file_path
-- -e -- exclude searching from paths which contain patterns:\n-e .git,.png,.exe
+optional arguments that accept an argument:
+- -f -- write all program output to the file, instead of standart output: -f $output_to_file_path
+- -e -- exclude searching from paths which contain patterns: -e .git,.png,.exe
